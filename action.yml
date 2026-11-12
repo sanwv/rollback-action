@@ -1,0 +1,67 @@
+name: Rsync Rollback
+author: sanwv
+description: Roll back an SSH deployment by atomically switching its current release symlink
+branding:
+  icon: rotate-ccw
+  color: orange
+inputs:
+  ssh_private_key:
+    description: SSH private key used to connect to the deployment server
+    required: true
+  ssh_known_hosts:
+    description: Verified SSH host keys in known_hosts format
+    required: false
+    default: ''
+  remote_host:
+    description: Remote hostname or IP address
+    required: true
+  remote_user:
+    description: SSH login user
+    required: true
+  remote_port:
+    description: SSH port
+    required: false
+    default: '22'
+  target:
+    description: Remote deployment root directory containing current and releases/
+    required: true
+  release_id:
+    description: Exact release ID to activate; mutually exclusive with steps
+    required: false
+    default: ''
+  steps:
+    description: Number of older releases to move from current (defaults to 1 when release_id is empty)
+    required: false
+    default: ''
+  script_before:
+    description: Bash script to run remotely before switching current
+    required: false
+    default: ''
+  script_after:
+    description: Bash script to run remotely after switching current; failure restores the previous release
+    required: false
+    default: ''
+outputs:
+  previous_release:
+    description: Release that was active before rollback
+    value: ${{ steps.rollback.outputs.previous_release }}
+  release_id:
+    description: Release activated by this rollback
+    value: ${{ steps.rollback.outputs.release_id }}
+runs:
+  using: composite
+  steps:
+    - id: rollback
+      shell: bash
+      env:
+        INPUT_SSH_PRIVATE_KEY: ${{ inputs.ssh_private_key }}
+        INPUT_SSH_KNOWN_HOSTS: ${{ inputs.ssh_known_hosts }}
+        INPUT_REMOTE_HOST: ${{ inputs.remote_host }}
+        INPUT_REMOTE_USER: ${{ inputs.remote_user }}
+        INPUT_REMOTE_PORT: ${{ inputs.remote_port }}
+        INPUT_TARGET: ${{ inputs.target }}
+        INPUT_RELEASE_ID: ${{ inputs.release_id }}
+        INPUT_STEPS: ${{ inputs.steps }}
+        INPUT_SCRIPT_BEFORE: ${{ inputs.script_before }}
+        INPUT_SCRIPT_AFTER: ${{ inputs.script_after }}
+      run: "$GITHUB_ACTION_PATH/rollback.sh"
