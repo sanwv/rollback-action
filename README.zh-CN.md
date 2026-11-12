@@ -21,6 +21,12 @@ Action 获取与 `sanwv/deploy-action` 相同的远端锁（`<target>/.deploy.lo
 
 `steps` 模式按 release 目录名的字典序排列版本。这与 `sanwv/deploy-action` 生成的 UTC 时间戳前缀（`YYYYMMDDTHHMMSSZ-<run-id>-<attempt>`）一致，不依赖目录修改时间。需要精确指定版本时使用 `release_id`。
 
+## 配合 `sanwv/deploy-action` 使用
+
+[`sanwv/deploy-action`](https://github.com/sanwv/deploy-action) 创建本 Action 可回退到的 release 目录。两个 Action 应配置相同的 SSH 主机、用户和 `target`。部署 Action 的 `releases_to_keep` 决定服务器保留多少历史版本；已被部署流程清理的版本无法通过回退恢复。
+
+两个 Action 都会获取远端 `<target>/.deploy.lock`，以串行处理回退、版本激活和旧版本清理。部署与回退工作流还应使用相同的 GitHub Actions concurrency group，并设置 `cancel-in-progress: false`。部署参数、shared 文件、构建示例和保留策略见[部署 Action README](https://github.com/sanwv/deploy-action#readme)。
+
 ## 参数与输出
 
 | 参数 | 必需 | 默认值 | 说明 |
