@@ -41,9 +41,16 @@ fi
 
 before_b64=$(printf '%s' "${INPUT_SCRIPT_BEFORE:-}" | base64 -w0)
 after_b64=$(printf '%s' "${INPUT_SCRIPT_AFTER:-}" | base64 -w0)
+empty_arg=__ROLLBACK_ACTION_EMPTY__
+requested_arg=${release_id:-$empty_arg}
+before_arg=${before_b64:-$empty_arg}
+after_arg=${after_b64:-$empty_arg}
 remote_script=$(cat <<'REMOTE'
 set -Eeuo pipefail
 target=$1; requested=$2; steps=$3; before_b64=$4; after_b64=$5
+[[ "$requested" != __ROLLBACK_ACTION_EMPTY__ ]] || requested=''
+[[ "$before_b64" != __ROLLBACK_ACTION_EMPTY__ ]] || before_b64=''
+[[ "$after_b64" != __ROLLBACK_ACTION_EMPTY__ ]] || after_b64=''
 root="$target/releases"
 [[ -d "$target" && -d "$root" ]] || { echo 'deployment target or releases directory does not exist' >&2; exit 1; }
 exec 9>"$target/.deploy.lock"
@@ -98,7 +105,7 @@ fi
 printf 'previous_release=%s\nrelease_id=%s\n' "$previous" "$target_id"
 REMOTE
 )
-remote_output=$(printf '%s\n' "$remote_script" | ssh "${ssh_opts[@]}" "$user@$host" bash -s -- "$target" "$release_id" "$steps" "$before_b64" "$after_b64") || { status=$?; exit "$status"; }
+remote_output=$(printf '%s\n' "$remote_script" | ssh "${ssh_opts[@]}" "$user@$host" bash -s -- "$target" "$requested_arg" "$steps" "$before_arg" "$after_arg") || { status=$?; exit "$status"; }
 printf '%s\n' "$remote_output"
 previous=$(sed -n 's/^previous_release=//p' <<< "$remote_output" | tail -n1)
 activated=$(sed -n 's/^release_id=//p' <<< "$remote_output" | tail -n1)
