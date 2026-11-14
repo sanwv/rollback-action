@@ -12,16 +12,9 @@ inputs:
     description: Verified SSH host keys in known_hosts format
     required: false
     default: ''
-  remote_host:
-    description: Remote hostname or IP address
+  ssh_host:
+    description: 'SSH connection target: user@host or user@host:port (default port 22; bracket IPv6 addresses)'
     required: true
-  remote_user:
-    description: SSH login user
-    required: true
-  remote_port:
-    description: SSH port
-    required: false
-    default: '22'
   target:
     description: Remote deployment root directory containing current and releases/
     required: true
@@ -56,9 +49,7 @@ runs:
       env:
         INPUT_SSH_PRIVATE_KEY: ${{ inputs.ssh_private_key }}
         INPUT_SSH_KNOWN_HOSTS: ${{ inputs.ssh_known_hosts }}
-        INPUT_REMOTE_HOST: ${{ inputs.remote_host }}
-        INPUT_REMOTE_USER: ${{ inputs.remote_user }}
-        INPUT_REMOTE_PORT: ${{ inputs.remote_port }}
+        INPUT_SSH_HOST: ${{ inputs.ssh_host }}
         INPUT_TARGET: ${{ inputs.target }}
         INPUT_RELEASE_ID: ${{ inputs.release_id }}
         INPUT_STEPS: ${{ inputs.steps }}

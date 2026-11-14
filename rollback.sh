@@ -3,15 +3,18 @@ set -Eeuo pipefail
 
 fail() { printf 'rollback-action: %s\n' "$*" >&2; exit 1; }
 for cmd in bash ssh base64; do command -v "$cmd" >/dev/null 2>&1 || fail "required command not found: $cmd"; done
-host=${INPUT_REMOTE_HOST:?remote_host is required}
-user=${INPUT_REMOTE_USER:?remote_user is required}
-port=${INPUT_REMOTE_PORT:-22}
+ssh_host=${INPUT_SSH_HOST:?ssh_host is required}
+if [[ "$ssh_host" =~ ^([A-Za-z0-9._-]+)@\[([A-Fa-f0-9:.]+)\](:([0-9]+))?$ ]]; then
+  user=${BASH_REMATCH[1]}; host=${BASH_REMATCH[2]}; port=${BASH_REMATCH[4]:-22}
+elif [[ "$ssh_host" =~ ^([A-Za-z0-9._-]+)@([A-Za-z0-9._-]+)(:([0-9]+))?$ ]]; then
+  user=${BASH_REMATCH[1]}; host=${BASH_REMATCH[2]}; port=${BASH_REMATCH[4]:-22}
+else
+  fail 'ssh_host must be user@host or user@host:port (use brackets for IPv6)'
+fi
+[[ "$port" =~ ^[1-9][0-9]{0,4}$ ]] && ((port <= 65535)) || fail 'ssh_host port must be between 1 and 65535'
 target=${INPUT_TARGET:?target is required}
 release_id=${INPUT_RELEASE_ID:-}
 steps=${INPUT_STEPS:-}
-[[ "$port" =~ ^[1-9][0-9]{0,4}$ ]] && ((port <= 65535)) || fail 'remote_port must be between 1 and 65535'
-[[ "$host" =~ ^[A-Za-z0-9._:-]+$ ]] || fail 'remote_host contains unsupported characters'
-[[ "$user" =~ ^[A-Za-z0-9._-]+$ ]] || fail 'remote_user contains unsupported characters'
 [[ "$target" = /* && "$target" != / && "$target" =~ ^/[A-Za-z0-9._/-]+$ ]] || fail 'target must be an absolute path containing only letters, digits, dot, underscore, slash, and hyphen'
 [[ "$target" != *'/../'* && "$target" != */.. && "$target" != */./* && "$target" != */. ]] || fail 'target may not contain dot path components'
 if [[ -n "$release_id" && -n "$steps" ]]; then fail 'release_id and steps are mutually exclusive'; fi

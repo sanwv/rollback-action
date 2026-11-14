@@ -32,11 +32,9 @@ Action 获取与 `sanwv/deploy-action` 相同的远端锁（`<target>/.deploy.lo
 | 参数 | 必需 | 默认值 | 说明 |
 |---|---:|---:|---|
 | `ssh_private_key` | 是 | — | SSH 私钥，通过 GitHub Secret 传入。 |
-| `remote_host` | 是 | — | 部署服务器主机名或 IP。 |
-| `remote_user` | 是 | — | SSH 登录用户。 |
+| `ssh_host` | 是 | — | SSH 连接目标，格式为 `user@host` 或 `user@host:port`，默认端口为 `22`；IPv6 地址使用方括号。 |
 | `target` | 是 | — | 远端部署根目录，不是 `current` 目录。 |
 | `ssh_known_hosts` | 否 | 空 | 已核验的 `known_hosts` 内容；留空时 SSH 使用 `accept-new`。 |
-| `remote_port` | 否 | `22` | SSH 端口。 |
 | `release_id` | 否 | 空 | 要激活的精确 release；与 `steps` 互斥。 |
 | `steps` | 否 | 未指定 `release_id` 时为 `1` | 从当前版本向旧版本移动的步数，范围 `1`–`100`。 |
 | `script_before` | 否 | 空 | 切换前在目标 release 目录中运行的远端 Bash 脚本。 |
@@ -54,9 +52,7 @@ Action 获取与 `sanwv/deploy-action` 相同的远端锁（`<target>/.deploy.lo
 |---|---|---|
 | `SSH_PRIVATE_KEY` | Secret | 服务器授权的 SSH 私钥。 |
 | `SSH_KNOWN_HOSTS` | 可选 Secret 或 Variable | 已核验的服务器 host key。 |
-| `REMOTE_HOST` | Variable | 服务器主机名或 IP。 |
-| `REMOTE_USER` | Variable | SSH 用户。 |
-| `REMOTE_PORT` | 可选 Variable | SSH 端口，默认 `22`。 |
+| `SSH_HOST` | Variable | SSH 连接目标，例如 `deploy@example.com:2222`；端口默认为 `22`。 |
 
 服务器需要 Bash、`flock`、`realpath`、`find`、`sort` 和常见 GNU/Linux 工具。SSH 用户需有权限读取 releases，并创建符号链接以及写入 `<target>/.deploy.lock` 和 `<target>/current`。
 
@@ -80,14 +76,12 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     steps:
-      - uses: sanwv/rollback-action@v1
+      - uses: sanwv/rollback-action@v2
         id: rollback
         with:
           ssh_private_key: ${{ secrets.SSH_PRIVATE_KEY }}
           ssh_known_hosts: ${{ secrets.SSH_KNOWN_HOSTS }}
-          remote_host: ${{ vars.REMOTE_HOST }}
-          remote_user: ${{ vars.REMOTE_USER }}
-          remote_port: ${{ vars.REMOTE_PORT }}
+          ssh_host: ${{ vars.SSH_HOST }}
           target: /srv/www/my-site
           steps: 1
       - run: echo "已从 ${{ steps.rollback.outputs.previous_release }} 回退到 ${{ steps.rollback.outputs.release_id }}"
@@ -115,11 +109,10 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     steps:
-      - uses: sanwv/rollback-action@v1
+      - uses: sanwv/rollback-action@v2
         with:
           ssh_private_key: ${{ secrets.SSH_PRIVATE_KEY }}
-          remote_host: ${{ vars.REMOTE_HOST }}
-          remote_user: ${{ vars.REMOTE_USER }}
+          ssh_host: ${{ vars.SSH_HOST }}
           target: /srv/www/my-site
           release_id: ${{ inputs.release_id }}
 ```
@@ -127,11 +120,10 @@ jobs:
 ### 回退两个版本并检查健康状态
 
 ```yaml
-- uses: sanwv/rollback-action@v1
+- uses: sanwv/rollback-action@v2
   with:
     ssh_private_key: ${{ secrets.SSH_PRIVATE_KEY }}
-    remote_host: ${{ vars.REMOTE_HOST }}
-    remote_user: ${{ vars.REMOTE_USER }}
+    ssh_host: ${{ vars.SSH_HOST }}
     target: /srv/www/my-site
     steps: 2
     script_after: |

@@ -32,11 +32,9 @@ Both Actions take the remote `<target>/.deploy.lock`, which serializes rollback 
 | Input | Required | Default | Description |
 |---|---:|---:|---|
 | `ssh_private_key` | Yes | — | SSH private key. Pass as a GitHub Secret. |
-| `remote_host` | Yes | — | Deployment server hostname or IP. |
-| `remote_user` | Yes | — | SSH login user. |
+| `ssh_host` | Yes | — | SSH target: `user@host` or `user@host:port` (default port `22`; bracket IPv6 addresses). |
 | `target` | Yes | — | Remote deployment root, not the `current` directory. |
 | `ssh_known_hosts` | No | Empty | Verified `known_hosts` entry. If empty, SSH uses `accept-new`. |
-| `remote_port` | No | `22` | SSH port. |
 | `release_id` | No | Empty | Exact release to activate. Mutually exclusive with `steps`. |
 | `steps` | No | `1` when `release_id` is empty | How many older retained releases to move from the active release. Range: `1`–`100`. |
 | `script_before` | No | Empty | Remote Bash script run in the target release before switching. |
@@ -54,9 +52,7 @@ Add these repository Actions settings:
 |---|---|---|
 | `SSH_PRIVATE_KEY` | Secret | Private key authorized on the server. |
 | `SSH_KNOWN_HOSTS` | Optional Secret or Variable | Verified server host key. |
-| `REMOTE_HOST` | Variable | Server hostname or IP. |
-| `REMOTE_USER` | Variable | SSH login user. |
-| `REMOTE_PORT` | Optional Variable | SSH port; defaults to `22`. |
+| `SSH_HOST` | Variable | SSH target, e.g. `deploy@example.com:2222`; port defaults to `22`. |
 
 The server needs Bash, `flock`, `realpath`, `find`, `sort`, and standard GNU/Linux utilities. The SSH user must be able to read the releases, create symlinks, and write `<target>/.deploy.lock` and `<target>/current`.
 
@@ -80,14 +76,12 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     steps:
-      - uses: sanwv/rollback-action@v1
+      - uses: sanwv/rollback-action@v2
         id: rollback
         with:
           ssh_private_key: ${{ secrets.SSH_PRIVATE_KEY }}
           ssh_known_hosts: ${{ secrets.SSH_KNOWN_HOSTS }}
-          remote_host: ${{ vars.REMOTE_HOST }}
-          remote_user: ${{ vars.REMOTE_USER }}
-          remote_port: ${{ vars.REMOTE_PORT }}
+          ssh_host: ${{ vars.SSH_HOST }}
           target: /srv/www/my-site
           steps: 1
       - run: echo "Rolled back from ${{ steps.rollback.outputs.previous_release }} to ${{ steps.rollback.outputs.release_id }}"
@@ -115,11 +109,10 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     steps:
-      - uses: sanwv/rollback-action@v1
+      - uses: sanwv/rollback-action@v2
         with:
           ssh_private_key: ${{ secrets.SSH_PRIVATE_KEY }}
-          remote_host: ${{ vars.REMOTE_HOST }}
-          remote_user: ${{ vars.REMOTE_USER }}
+          ssh_host: ${{ vars.SSH_HOST }}
           target: /srv/www/my-site
           release_id: ${{ inputs.release_id }}
 ```
@@ -127,11 +120,10 @@ jobs:
 ### Roll back two releases and check health
 
 ```yaml
-- uses: sanwv/rollback-action@v1
+- uses: sanwv/rollback-action@v2
   with:
     ssh_private_key: ${{ secrets.SSH_PRIVATE_KEY }}
-    remote_host: ${{ vars.REMOTE_HOST }}
-    remote_user: ${{ vars.REMOTE_USER }}
+    ssh_host: ${{ vars.SSH_HOST }}
     target: /srv/www/my-site
     steps: 2
     script_after: |
